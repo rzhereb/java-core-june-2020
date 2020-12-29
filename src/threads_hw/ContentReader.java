@@ -2,15 +2,20 @@ package threads_hw;
 
 import java.io.BufferedReader;
 import java.io.IOException;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 public class ContentReader implements Runnable {
 
     private final LineStorage lineStorage;
     private BufferedReader bufferedReader;
+    private AtomicBoolean lineWritten;
+    private AtomicBoolean linePrinted;
 
-    public ContentReader(LineStorage lineStorage, BufferedReader bufferedReader) {
+    public ContentReader(LineStorage lineStorage, BufferedReader bufferedReader, AtomicBoolean lineWritten, AtomicBoolean linePrinted) {
         this.lineStorage = lineStorage;
         this.bufferedReader = bufferedReader;
+        this.lineWritten = lineWritten;
+        this.linePrinted = linePrinted;
     }
 
     @Override
@@ -20,19 +25,24 @@ public class ContentReader implements Runnable {
             try {
                 while ((line = bufferedReader.readLine()) != null) {
                     lineStorage.setLine(line);
-                    lineStorage.notify();
+
+                    linePrinted.set(false);
+                    lineWritten.set(false);
+
+                    lineStorage.notifyAll();
                     try {
                         lineStorage.wait();
                     } catch (Exception e) {
                         e.printStackTrace();
                     }
                 }
-
             } catch (IOException e) {
                 e.printStackTrace();
             }
             lineStorage.isFinished().set(true);
-            lineStorage.notify();
+            linePrinted.set(false);
+            lineWritten.set(false);
+            lineStorage.notifyAll();
         }
     }
 }
